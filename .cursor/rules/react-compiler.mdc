@@ -1,0 +1,56 @@
+---
+description: React Compiler best practices — no manual memoization
+globs: "**/*.tsx,**/*.ts"
+alwaysApply: false
+---
+
+# React Compiler Best Practices
+
+This project uses the React Compiler (`babel-plugin-react-compiler`). The compiler automatically memoizes variables, functions, and component output. Follow these rules.
+
+## Do not use memoization hooks
+
+Never use `useMemo`, `useCallback`, or `React.memo` for performance. The compiler handles this.
+
+```tsx
+// BAD — redundant with the compiler
+const items = useMemo(() => data.filter(isActive), [data]);
+const handleClick = useCallback(() => select(id), [id, select]);
+
+// GOOD — plain code, compiler memoizes automatically
+const items = data.filter(isActive);
+function handleClick() { select(id); }
+```
+
+## Hooks that are NOT memoization
+
+Keep using `useState`, `useEffect`, `useRef`, `useReducer`, `useContext`, and custom hooks — these serve purposes the compiler does not replace.
+
+## Keep render pure
+
+The compiler assumes render functions are pure. Do not mutate external state or trigger side effects during render.
+
+```tsx
+// BAD — mutation during render
+const list = [];
+for (const item of items) { list.push(transform(item)); } // mutates list
+
+// GOOD — build fresh value
+const list = items.map(transform);
+```
+
+## Do not read refs during render
+
+The compiler cannot track `.current` mutations. Reading a ref to decide what to render breaks compiler assumptions.
+
+```tsx
+// BAD — ref read determines render output
+if (!targetRef.current) return null;
+
+// GOOD — accept the value as a prop
+function Gizmo({ target }: { target: Object3D }) { ... }
+```
+
+## Rules of Hooks still apply
+
+Never call hooks conditionally or after early returns. The compiler does not relax this rule.
