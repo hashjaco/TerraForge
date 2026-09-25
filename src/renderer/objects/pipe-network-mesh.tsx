@@ -1,5 +1,7 @@
+import { useLayoutEffect, useRef } from "react";
 import * as THREE from "three";
-import { useSelectionStore } from "@/stores/selection-store";
+import { useIsSelected } from "@/stores/selection-store";
+import { civilToThree } from "@/renderer/lib/geometry";
 import type { PipeNetworkData } from "@/lib/types/civil-objects";
 
 interface Props {
@@ -7,65 +9,89 @@ interface Props {
   data: PipeNetworkData;
 }
 
-export function PipeNetworkMesh({ objectId, data }: Props) {
-  const selectedIds = useSelectionStore((s) => s.selectedIds);
-  const isSelected = selectedIds.includes(objectId);
-  const nodeColor = isSelected ? "#60a5fa" : "#22c55e";
-  const pipeColor = isSelected ? "#93c5fd" : "#4ade80";
+// ponytail: module-level unit geometries shared by every network, never disposed (a few KB total).
+const UNIT_SPHERE = new THREE.SphereGeometry(1, 16, 12);
+const UNIT_CYLINDER = new THREE.CylinderGeometry(1, 1, 1, 12);
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
 
-  const pipeGeometries = data.pipes.map((pipe) => {
-    const startNode = data.nodes.find((n) => n.id === pipe.start_node_id);
-    const endNode = data.nodes.find((n) => n.id === pipe.end_node_id);
-    if (!startNode || !endNode) return null;
+function nodePosition(node: PipeNetworkData["nodes"][number]) {
+  return civilToThree(node.position[0], node.position[1], node.invert_elevation);
+}
 
-    // Swap Y and Z: civil (X,Y,Z-up) → Three.js (X,Y-up,Z)
-    const start = new THREE.Vector3(
-      startNode.position[0],
-      startNode.invert_elevation,
-      startNode.position[1]
-    );
-    const end = new THREE.Vector3(
-      endNode.position[0],
-      endNode.invert_elevation,
-      endNode.position[1]
-    );
+function writeInstances(nodesMesh: THREE.InstancedMesh, pipesMesh: THREE.InstancedMesh, data: PipeNetworkData) {
+  const matrix = new THREE.Matrix4();
+  const position = new THREE.Vector3();
+  const scale = new THREE.Vector3();
+  const quaternion = new THREE.Quaternion();
+  const nodesById = new Map(data.nodes.map((n) => [n.id, n]));
 
-    const direction = new THREE.Vector3().subVectors(end, start);
-    const length = direction.length();
-    const midpoint = new THREE.Vector3()
-      .addVectors(start, end)
-      .multiplyScalar(0.5);
-
-    return { pipe, start, end, direction, length, midpoint };
+  data.nodes.forEach((node, i) => {
+    const radius = node.node_type === "manhole" ? 0.5 : 0.3;
+    position.set(...nodePosition(node));
+    scale.setScalar(radius);
+    quaternion.identity();
+    nodesMesh.setMatrixAt(i, matrix.compose(position, quaternion, scale));
   });
+
+  const start = new THREE.Vector3();
+  const end = new THREE.Vector3();
+  const dir = new THREE.Vector3();
+  let pipeCount = 0;
+  for (const pipe of data.pipes) {
+    const a = nodesById.get(pipe.start_node_id);
+    const b = nodesById.get(pipe.end_node_id);
+    if (!a || !b) continue;
+    start.set(...nodePosition(a));
+    end.set(...nodePosition(b));
+    dir.subVectors(end, start);
+    const length = dir.length();
+    if (length === 0) continue;
+    position.addVectors(start, end).multiplyScalar(0.5);
+    quaternion.setFromUnitVectors(Y_AXIS, dir.divideScalar(length));
+    scale.set(pipe.diameter / 2, length, pipe.diameter / 2);
+    pipesMesh.setMatrixAt(pipeCount++, matrix.compose(position, quaternion, scale));
+  }
+  pipesMesh.count = pipeCount;
+
+  for (const mesh of [nodesMesh, pipesMesh]) {
+    mesh.instanceMatrix.needsUpdate = true;
+    mesh.computeBoundingSphere();
+  }
+}
+
+export function PipeNetworkMesh({ objectId, data }: Props) {
+  const isSelected = useIsSelected(objectId);
+  const nodesRef = useRef<THREE.InstancedMesh>(null);
+  const pipesRef = useRef<THREE.InstancedMesh>(null);
+
+  useLayoutEffect(() => {
+    if (nodesRef.current && pipesRef.current) {
+      writeInstances(nodesRef.current, pipesRef.current, data);
+    }
+  }, [data]);
 
   return (
     <group userData={{ objectId }}>
-      {data.nodes.map((node) => (
-        <mesh
-          key={node.id}
-          position={[node.position[0], node.invert_elevation, node.position[1]]}
-        >
-          <sphereGeometry args={[node.node_type === "manhole" ? 0.5 : 0.3, 16, 16]} />
-          <meshStandardMaterial color={nodeColor} />
-        </mesh>
-      ))}
-
-      {pipeGeometries.map((pg, i) => {
-        if (!pg) return null;
-        const { midpoint, length, start, end, pipe } = pg;
-
-        const dir = new THREE.Vector3().subVectors(end, start).normalize();
-        const quaternion = new THREE.Quaternion();
-        quaternion.setFromUnitVectors(new THREE.Vector3(0, 1, 0), dir);
-
-        return (
-          <mesh key={pipe.id} position={midpoint} quaternion={quaternion}>
-            <cylinderGeometry args={[pipe.diameter / 2, pipe.diameter / 2, length, 12]} />
-            <meshStandardMaterial color={pipeColor} transparent opacity={0.8} />
-          </mesh>
-        );
-      })}
+      <instancedMesh
+        key={`n${data.nodes.length}`}
+        ref={nodesRef}
+        args={[UNIT_SPHERE, undefined, data.nodes.length]}
+      >
+        <meshStandardMaterial color={isSelected ? "#60a5fa" : "#22c55e"} roughness={0.4} metalness={0.2} />
+      </instancedMesh>
+      <instancedMesh
+        key={`p${data.pipes.length}`}
+        ref={pipesRef}
+        args={[UNIT_CYLINDER, undefined, data.pipes.length]}
+      >
+        <meshStandardMaterial
+          color={isSelected ? "#93c5fd" : "#4ade80"}
+          roughness={0.35}
+          metalness={0.3}
+          transparent
+          opacity={0.85}
+        />
+      </instancedMesh>
     </group>
   );
 }

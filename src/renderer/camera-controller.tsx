@@ -1,5 +1,18 @@
-import { OrbitControls, OrthographicCamera } from "@react-three/drei";
-import { useViewportStore } from "@/stores/viewport-store";
+import { useEffect, useRef } from "react";
+import * as THREE from "three";
+import { useThree } from "@react-three/fiber";
+import { CameraControls, OrbitControls, OrthographicCamera } from "@react-three/drei";
+import type { CameraControls as CameraControlsImpl } from "@react-three/drei";
+import {
+  DEFAULT_CAMERA_POSITION,
+  DEFAULT_CAMERA_TARGET,
+  useViewportStore,
+} from "@/stores/viewport-store";
+import { pickCivilObject } from "@/renderer/interaction/selection-manager";
+
+const FIT_PADDING = { paddingTop: 4, paddingBottom: 4, paddingLeft: 4, paddingRight: 4 };
+const scratchPosition = new THREE.Vector3();
+const scratchTarget = new THREE.Vector3();
 
 function PlanViewCamera() {
   return (
@@ -26,28 +39,48 @@ function PlanViewCamera() {
 }
 
 function PerspectiveViewCamera() {
-  const setCameraPosition = useViewportStore((s) => s.setCameraPosition);
-  const setCameraTarget = useViewportStore((s) => s.setCameraTarget);
+  const controlsRef = useRef<CameraControlsImpl>(null);
+  const resetNonce = useViewportStore((s) => s.cameraResetNonce);
+  const scene = useThree((s) => s.scene);
+  const gl = useThree((s) => s.gl);
+  const camera = useThree((s) => s.camera);
+
+  useEffect(() => {
+    if (resetNonce === 0) return;
+    controlsRef.current?.setLookAt(...DEFAULT_CAMERA_POSITION, ...DEFAULT_CAMERA_TARGET, true);
+  }, [resetNonce]);
+
+  useEffect(() => {
+    const canvas = gl.domElement;
+    function focusPicked(e: MouseEvent) {
+      const picked = pickCivilObject(e, camera, scene, canvas);
+      if (picked) controlsRef.current?.fitToBox(picked, true, FIT_PADDING);
+    }
+    canvas.addEventListener("dblclick", focusPicked);
+    return () => canvas.removeEventListener("dblclick", focusPicked);
+  }, [camera, scene, gl]);
+
+  // Writes to the store only when motion settles; per-frame writes re-render every subscriber.
+  function publishCamera() {
+    const controls = controlsRef.current;
+    if (!controls) return;
+    controls.getPosition(scratchPosition);
+    controls.getTarget(scratchTarget);
+    const { setCameraPosition, setCameraTarget } = useViewportStore.getState();
+    setCameraPosition([scratchPosition.x, scratchPosition.y, scratchPosition.z]);
+    setCameraTarget([scratchTarget.x, scratchTarget.y, scratchTarget.z]);
+  }
 
   return (
-    <OrbitControls
+    <CameraControls
+      ref={controlsRef}
       makeDefault
-      enableDamping
-      dampingFactor={0.1}
-      rotateSpeed={0.5}
-      panSpeed={1}
-      zoomSpeed={1.2}
+      smoothTime={0.22}
+      draggingSmoothTime={0.08}
       minDistance={1}
       maxDistance={10000}
-      onChange={(e) => {
-        if (e?.target) {
-          const controls = e.target as any;
-          const pos = controls.object.position;
-          const tgt = controls.target;
-          setCameraPosition([pos.x, pos.y, pos.z]);
-          setCameraTarget([tgt.x, tgt.y, tgt.z]);
-        }
-      }}
+      dollyToCursor
+      onRest={publishCamera}
     />
   );
 }

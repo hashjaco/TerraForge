@@ -1,4 +1,5 @@
 import type { TutorialDefinition } from "./index";
+import { ensureProfessionalMode, hasObjectOfType, isPanelOpen, isWorkspace } from "./conditions";
 
 export const drainageSystemTutorial: TutorialDefinition = {
   id: "drainage-system",
@@ -18,7 +19,11 @@ export const drainageSystemTutorial: TutorialDefinition = {
       title: "Create a Pipe Network",
       description:
         'Create a new pipe network and select the system type. For storm drainage, choose "Storm Sewer." This creates an empty network that you\'ll populate with nodes and pipes.',
-      targetElement: "pipe-panel",
+      setup: ensureProfessionalMode,
+      targetElement: () =>
+        isPanelOpen("pipe-network") ? "pipe-form" : isWorkspace("drainage") ? "tool-pipe-net" : "workspace-drainage",
+      action: "Drainage tab → Pipe Network → Create Network.",
+      completeWhen: () => hasObjectOfType("pipe-network"),
     },
     {
       title: "Add Nodes",
@@ -39,6 +44,7 @@ export const drainageSystemTutorial: TutorialDefinition = {
       description:
         "Use the Flow Analysis tool to check if your pipes can handle the design flow. Manning's equation calculates the capacity and velocity of each pipe. Green = adequate, Red = undersized.",
       targetElement: "flow-analysis",
+      action: "Open the Analysis tab in the right sidebar and click Run Analysis.",
     },
     {
       title: "Drainage Design Complete",

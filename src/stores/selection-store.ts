@@ -36,3 +36,7 @@ export const useSelectionStore = create<SelectionState>((set, get) => ({
   setActiveTool: (activeTool) => set({ activeTool }),
   isSelected: (id) => get().selectedIds.includes(id),
 }));
+
+export function useIsSelected(id: string): boolean {
+  return useSelectionStore((s) => s.selectedIds.includes(id));
+}

@@ -60,6 +60,7 @@ interface UIState {
   isLoading: boolean;
 
   activeWorkspace: WorkspaceId;
+  rightSidebarTab: string;
   activePanel: ActivePanel;
   professionalMode: boolean;
   ribbonCollapsed: boolean;
@@ -75,6 +76,7 @@ interface UIState {
   setLoading: (loading: boolean) => void;
 
   setActiveWorkspace: (ws: WorkspaceId) => void;
+  setRightSidebarTab: (tab: string) => void;
   setActivePanel: (panel: ActivePanel) => void;
   toggleProfessionalMode: () => void;
   setProfessionalMode: (on: boolean) => void;
@@ -106,12 +108,18 @@ export const useUIStore = create<UIState>((set) => ({
   isLoading: false,
 
   activeWorkspace: "home",
+  rightSidebarTab: "properties",
   activePanel: null,
   professionalMode: false,
   ribbonCollapsed: false,
   visitedWorkspaces: ["home"],
 
-  setTheme: (theme) => set({ theme }),
+  // The attribute is set before the store update so components reading CSS
+  // variables during the resulting render see the new theme's values.
+  setTheme: (theme) => {
+    document.documentElement.setAttribute("data-theme", theme);
+    set({ theme });
+  },
   toggleCommandPalette: () =>
     set((s) => ({ commandPaletteOpen: !s.commandPaletteOpen })),
   openCommandPalette: () => set({ commandPaletteOpen: true }),
@@ -132,6 +140,7 @@ export const useUIStore = create<UIState>((set) => ({
     })),
   setStatusMessage: (statusMessage) => set({ statusMessage }),
   setLoading: (isLoading) => set({ isLoading }),
+  setRightSidebarTab: (rightSidebarTab) => set({ rightSidebarTab }),
 
   setActiveWorkspace: (ws) =>
     set((s) => ({

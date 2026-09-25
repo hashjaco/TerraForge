@@ -8,7 +8,7 @@ export function PropertyPanel() {
 
   if (selectedIds.length === 0) {
     return (
-      <div className="h-full p-4">
+      <div className="h-full p-4" data-tutorial-id="properties-panel">
         <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
           Properties
         </h3>
@@ -21,7 +21,7 @@ export function PropertyPanel() {
 
   if (selectedIds.length > 1) {
     return (
-      <div className="h-full p-4">
+      <div className="h-full p-4" data-tutorial-id="properties-panel">
         <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
           Properties
         </h3>
@@ -36,7 +36,7 @@ export function PropertyPanel() {
   if (!obj) return null;
 
   return (
-    <div className="h-full overflow-y-auto p-4">
+    <div className="h-full overflow-y-auto p-4" data-tutorial-id="properties-panel">
       <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
         Properties
       </h3>

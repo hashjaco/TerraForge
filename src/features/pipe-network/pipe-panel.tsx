@@ -42,7 +42,7 @@ export function PipePanel() {
   }
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 space-y-3" data-tutorial-id="pipe-form">
       <h3 className="text-xs font-semibold text-text-secondary uppercase">
         Create Pipe Network
       </h3>

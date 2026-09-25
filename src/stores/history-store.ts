@@ -25,6 +25,10 @@ interface HistoryState {
   getCurrentSnapshot: () => SerializedProjectState | null;
 }
 
+// Each entry holds a full project snapshot, so memory grows linearly with depth.
+export const MAX_HISTORY_ENTRIES = 100;
+let nextEntryId = 0;
+
 export const useHistoryStore = create<HistoryState>((set, get) => ({
   entries: [],
   currentIndex: -1,
@@ -35,12 +39,15 @@ export const useHistoryStore = create<HistoryState>((set, get) => ({
     set((state) => {
       const entries = state.entries.slice(0, state.currentIndex + 1);
       const newEntry: HistoryEntry = {
-        id: entries.length,
+        id: nextEntryId++,
         description,
         timestamp: Date.now(),
         snapshot,
       };
       entries.push(newEntry);
+      if (entries.length > MAX_HISTORY_ENTRIES) {
+        entries.splice(0, entries.length - MAX_HISTORY_ENTRIES);
+      }
       const currentIndex = entries.length - 1;
       return {
         entries,

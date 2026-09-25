@@ -15,7 +15,8 @@ export function ProfilePanel() {
   const alignments = Array.from(objects.values()).filter(
     (o) => o.type === "alignment"
   );
-  const [selectedAlignmentId, setSelectedAlignmentId] = useState("");
+  const [pickedAlignmentId, setSelectedAlignmentId] = useState("");
+  const selectedAlignmentId = pickedAlignmentId || alignments[alignments.length - 1]?.id || "";
 
   async function createDemoProfile() {
     if (!selectedAlignmentId) {
@@ -62,7 +63,7 @@ export function ProfilePanel() {
   }
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 space-y-3" data-tutorial-id="profile-form">
       <h3 className="text-xs font-semibold text-text-secondary uppercase">
         Create Profile
       </h3>

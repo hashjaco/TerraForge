@@ -19,8 +19,10 @@ export function CorridorPanel() {
     (o) => o.type === "profile"
   );
 
-  const [selectedAlignmentId, setSelectedAlignmentId] = useState("");
-  const [selectedProfileId, setSelectedProfileId] = useState("");
+  const [pickedAlignmentId, setSelectedAlignmentId] = useState("");
+  const [pickedProfileId, setSelectedProfileId] = useState("");
+  const selectedAlignmentId = pickedAlignmentId || alignments[alignments.length - 1]?.id || "";
+  const selectedProfileId = pickedProfileId || profiles[profiles.length - 1]?.id || "";
 
   async function createCorridor() {
     if (!selectedAlignmentId || !selectedProfileId) {
@@ -66,7 +68,7 @@ export function CorridorPanel() {
   }
 
   return (
-    <div className="p-3 space-y-3">
+    <div className="p-3 space-y-3" data-tutorial-id="corridor-form">
       <h3 className="text-xs font-semibold text-text-secondary uppercase">
         Create Corridor
       </h3>

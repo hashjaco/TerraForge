@@ -25,7 +25,7 @@ export function Tooltip({ content, children, side = "top" }: Props) {
       {children}
       {visible && (
         <div
-          className={`absolute ${positionClasses[side]} px-2 py-1 bg-neutral-800 border border-border rounded text-xs text-text-primary whitespace-nowrap z-50 pointer-events-none`}
+          className={`absolute ${positionClasses[side]} px-2 py-1 glass rounded-md text-xs text-text-primary whitespace-nowrap z-50 pointer-events-none animate-overlay-in`}
         >
           {content}
         </div>

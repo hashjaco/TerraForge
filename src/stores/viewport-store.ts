@@ -1,6 +1,9 @@
 import { create } from "zustand";
 
 type ViewMode = "3d" | "plan" | "profile" | "cross-section";
+export const DEFAULT_CAMERA_POSITION: [number, number, number] = [100, 100, 100];
+export const DEFAULT_CAMERA_TARGET: [number, number, number] = [0, 0, 0];
+
 type CameraProjection = "perspective" | "orthographic";
 
 interface ViewportState {
@@ -9,6 +12,7 @@ interface ViewportState {
   cameraPosition: [number, number, number];
   cameraTarget: [number, number, number];
   zoom: number;
+  cameraResetNonce: number;
   showGrid: boolean;
   showContours: boolean;
   showLabels: boolean;
@@ -27,9 +31,10 @@ interface ViewportState {
 export const useViewportStore = create<ViewportState>((set) => ({
   viewMode: "3d",
   projection: "perspective",
-  cameraPosition: [100, 100, 100],
-  cameraTarget: [0, 0, 0],
+  cameraPosition: DEFAULT_CAMERA_POSITION,
+  cameraTarget: DEFAULT_CAMERA_TARGET,
   zoom: 1,
+  cameraResetNonce: 0,
   showGrid: true,
   showContours: true,
   showLabels: true,
@@ -47,9 +52,10 @@ export const useViewportStore = create<ViewportState>((set) => ({
   toggleContours: () => set((s) => ({ showContours: !s.showContours })),
   toggleLabels: () => set((s) => ({ showLabels: !s.showLabels })),
   resetCamera: () =>
-    set({
-      cameraPosition: [100, 100, 100],
-      cameraTarget: [0, 0, 0],
+    set((s) => ({
+      cameraPosition: DEFAULT_CAMERA_POSITION,
+      cameraTarget: DEFAULT_CAMERA_TARGET,
       zoom: 1,
-    }),
+      cameraResetNonce: s.cameraResetNonce + 1,
+    })),
 }));

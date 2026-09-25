@@ -1,4 +1,6 @@
-import { useRef, useEffect, useState } from "react";
+import { useThemeColors } from "@/lib/theme-tokens";
+import { useCanvas2d } from "./use-canvas-2d";
+import { useState } from "react";
 import type { TemplateElement } from "@/lib/types/civil-objects";
 
 const DEFAULT_TEMPLATE: TemplateElement[] = [
@@ -20,23 +22,15 @@ const ELEMENT_COLORS: Record<string, string> = {
 };
 
 export function TemplateEditor() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const colors = useThemeColors();
   const [elements] = useState<TemplateElement[]>(DEFAULT_TEMPLATE);
 
-  function draw() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const w = canvas.width;
-    const h = canvas.height;
+  function draw(ctx: CanvasRenderingContext2D, w: number, h: number) {
     const centerX = w / 2;
     const centerY = h * 0.6;
     const scale = 20;
 
-    ctx.fillStyle = "#0a0a0a";
+    ctx.fillStyle = colors.surface;
     ctx.fillRect(0, 0, w, h);
 
     ctx.strokeStyle = "#ef4444";
@@ -95,26 +89,14 @@ export function TemplateEditor() {
       if (elements.some((e) => e.type === type)) {
         ctx.fillStyle = color;
         ctx.fillRect(10, ly - 8, 10, 10);
-        ctx.fillStyle = "#a3a3a3";
+        ctx.fillStyle = colors.textSecondary;
         ctx.fillText(type, 25, ly);
         ly += 16;
       }
     }
   }
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const observer = new ResizeObserver(() => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      draw();
-    });
-    observer.observe(canvas);
-    draw();
-    return () => observer.disconnect();
-  });
+  const canvasRef = useCanvas2d(draw);
 
   return (
     <div className="h-full relative">

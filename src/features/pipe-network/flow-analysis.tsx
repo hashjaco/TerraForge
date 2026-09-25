@@ -52,7 +52,7 @@ export function FlowAnalysis() {
         Flow Analysis
       </h3>
 
-      <Button variant="primary" size="sm" onClick={runAnalysis} className="w-full">
+      <Button variant="primary" size="sm" onClick={runAnalysis} className="w-full" data-tutorial-id="flow-analysis">
         Run Analysis
       </Button>
 

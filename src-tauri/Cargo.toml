@@ -29,6 +29,8 @@ geo = "0.29"
 quick-xml = { version = "0.37", features = ["serialize"] }
 tiff = "0.9"
 geojson = "0.24"
+reqwest = { version = "0.13", features = ["json"] }
+keyring = { version = "3", features = ["apple-native", "windows-native", "sync-secret-service", "crypto-rust"] }
 
 [build-dependencies]
 tauri-build = { version = "2", features = [] }

@@ -4,6 +4,7 @@ import { useUIStore, type WorkspaceId, type ActivePanel } from "@/stores/ui-stor
 import { useViewportStore } from "@/stores/viewport-store";
 import { useEducationStore } from "@/stores/education-store";
 import { useHistoryStore } from "@/stores/history-store";
+import { tutorials } from "@/education/tutorials";
 
 interface CommandItem {
   id: string;
@@ -112,9 +113,12 @@ export function CommandPalette() {
     { id: "theme-solarized-light", label: "Theme: Solarized Light", category: "Theme", action: () => useUIStore.getState().setTheme("solarized-light") },
 
     // Tutorials
-    { id: "tutorial-terrain", label: "Tutorial: Create Terrain", category: "Tutorials", action: () => startTutorial("create-terrain", 5) },
-    { id: "tutorial-road", label: "Tutorial: Design a Road", category: "Tutorials", action: () => startTutorial("design-road", 8) },
-    { id: "tutorial-drainage", label: "Tutorial: Build Drainage", category: "Tutorials", action: () => startTutorial("drainage-system", 6) },
+    ...tutorials.map((t) => ({
+      id: `tutorial-${t.id}`,
+      label: `Tutorial: ${t.title}`,
+      category: "Tutorials",
+      action: () => startTutorial(t.id, t.steps.length),
+    })),
   ];
 
   useEffect(() => {
@@ -152,8 +156,8 @@ export function CommandPalette() {
 
   return (
     <div className="fixed inset-0 z-50 flex items-start justify-center pt-[18vh]">
-      <div className="fixed inset-0 bg-black/60" onClick={close} />
-      <div className="relative w-[560px] bg-surface-raised border border-border rounded-xl shadow-2xl overflow-hidden">
+      <div className="fixed inset-0 bg-black/50 backdrop-blur-[2px] animate-overlay-in" onClick={close} />
+      <div className="relative w-[min(560px,calc(100vw-32px))] glass rounded-xl shadow-elev-3 overflow-hidden animate-pop-in">
         <Command label="Command Palette" className="w-full">
           <Command.Input
             placeholder="Type a command or search..."
@@ -180,7 +184,7 @@ export function CommandPalette() {
                       key={cmd.id}
                       value={cmd.label}
                       onSelect={() => runCommand(cmd)}
-                      className="flex items-center justify-between px-3 py-2 rounded-md text-sm cursor-pointer text-text-primary data-[selected]:bg-primary-900/50 data-[selected]:text-primary-200"
+                      className="flex items-center justify-between px-3 py-2 rounded-md text-sm cursor-pointer text-text-primary transition-colors duration-100 data-[selected=true]:bg-primary-500/15 data-[selected=true]:text-text-primary data-[selected=true]:shadow-[inset_2px_0_0_var(--tf-accent)]"
                     >
                       <span>{cmd.label}</span>
                       {cmd.shortcut && (

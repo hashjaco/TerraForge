@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Panel,
   Group as PanelGroup,
@@ -8,6 +8,7 @@ import { RibbonToolbar } from "./ribbon-toolbar";
 import { StatusBar } from "./status-bar";
 import { Viewport } from "@/renderer/viewport";
 import { useUIStore } from "@/stores/ui-store";
+import { useLlmSettingsStore } from "@/stores/llm-settings-store";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useProjectStore } from "@/stores/project-store";
 import { PropertyPanel } from "@/components/properties/property-panel";
@@ -27,8 +28,20 @@ import { QuantityTakeoff } from "@/features/documentation/quantity-takeoff";
 import { SheetGenerator } from "@/features/documentation/sheet-generator";
 import { NodeEditor } from "@/features/automation/node-editor";
 import { ThemeSelector } from "@/components/ui/theme-selector";
+import { AssistantPanel } from "@/features/assistant/assistant-panel";
+import { AiProviderSettings } from "@/features/settings/ai-provider-settings";
 import { tutorials } from "@/education/tutorials";
 import { useEducationStore } from "@/stores/education-store";
+
+function SettingsPanel() {
+  return (
+    <div className="h-full overflow-y-auto">
+      <ThemeSelector />
+      <div className="border-t border-border" />
+      <AiProviderSettings />
+    </div>
+  );
+}
 
 function GuidePanel() {
   const startTutorial = useEducationStore((s) => s.startTutorial);
@@ -38,24 +51,30 @@ function GuidePanel() {
     <div className="h-full overflow-y-auto">
       <LearningModeSelector />
       <div className="border-t border-border" />
-      <ThemeSelector />
-      <div className="border-t border-border" />
       <div className="p-3 space-y-2">
         <h3 className="text-xs font-semibold text-text-secondary uppercase">
           Tutorials
         </h3>
-        {tutorials.map((t) => {
+        {tutorials.map((t, index) => {
           const done = completedTutorials.includes(t.id);
+          const featured = index === 0 && !done;
           return (
             <button
               key={t.id}
               onClick={() => startTutorial(t.id, t.steps.length)}
-              className="w-full text-left p-2.5 rounded-lg bg-surface-overlay hover:bg-neutral-800 transition-colors"
+              className={`w-full text-left p-2.5 rounded-lg bg-surface-overlay hover:bg-surface-secondary hover:shadow-elev-1 transition-[background-color,box-shadow] duration-150 ${
+                featured ? "ring-1 ring-primary-500/50 bg-primary-500/5" : ""
+              }`}
             >
-              <div className="flex items-center justify-between">
+              <div className="flex items-center justify-between gap-2">
                 <span className="text-sm text-text-primary font-medium">
                   {t.title}
                 </span>
+                {featured && (
+                  <span className="shrink-0 text-[10px] font-semibold text-primary-300 bg-primary-500/15 px-1.5 py-0.5 rounded">
+                    Start here
+                  </span>
+                )}
                 {done && (
                   <span className="text-[10px] text-green-400">Done</span>
                 )}
@@ -75,10 +94,20 @@ function GuidePanel() {
   );
 }
 
+function useIsAlignmentSelected(): boolean {
+  const selectedIds = useSelectionStore((s) => s.selectedIds);
+  const selectedType = useProjectStore((s) =>
+    selectedIds.length === 1 ? s.objects.get(selectedIds[0])?.type : undefined,
+  );
+  return selectedType === "alignment";
+}
+
 function BottomEditorPanel() {
   const panels = useUIStore((s) => s.panels);
+  const alignmentSelected = useIsAlignmentSelected();
 
   const hasAnyEditor =
+    alignmentSelected ||
     panels["profile-editor"]?.visible ||
     panels["template-editor"]?.visible ||
     panels["pipe-editor"]?.visible ||
@@ -97,7 +126,7 @@ function BottomEditorPanel() {
         maxSize="60%"
         className="bg-surface-raised"
       >
-        <div className="h-full flex flex-col">
+        <div className="h-full flex flex-col" data-tutorial-id="bottom-editor">
           <EditorTabs />
         </div>
       </Panel>
@@ -161,14 +190,12 @@ function EditorTabs() {
     });
   }
 
-  if (editorTabs.length === 0 && selectedObj) {
-    if (selectedObj.type === "alignment") {
-      editorTabs.push({
-        id: "align-ed",
-        label: "Alignment",
-        content: <AlignmentEditor />,
-      });
-    }
+  if (selectedObj?.type === "alignment") {
+    editorTabs.unshift({
+      id: "align-ed",
+      label: "Alignment",
+      content: <AlignmentEditor />,
+    });
   }
 
   const resolvedActiveId =
@@ -201,7 +228,8 @@ function EditorTabs() {
         <button
           onClick={() => {
             for (const tab of editorTabs) {
-              setPanelVisible(tab.id as any, false);
+              if (tab.id === "align-ed") useSelectionStore.getState().clearSelection();
+              else setPanelVisible(tab.id as any, false);
             }
           }}
           className="px-2 py-1 text-xs text-text-muted hover:text-text-primary mr-1"
@@ -265,6 +293,13 @@ function LeftSidebar() {
 
 function RightSidebar() {
   const professionalMode = useUIStore((s) => s.professionalMode);
+  const rightSidebarTab = useUIStore((s) => s.rightSidebarTab);
+  const setRightSidebarTab = useUIStore((s) => s.setRightSidebarTab);
+  const refreshKeyStatus = useLlmSettingsStore((s) => s.refreshKeyStatus);
+
+  useEffect(() => {
+    refreshKeyStatus();
+  }, [refreshKeyStatus]);
 
   const rightTabs = [
     { id: "properties", label: "Properties", content: <PropertyPanel /> },
@@ -276,14 +311,18 @@ function RightSidebar() {
             label: "Checks",
             content: <ValidationPanel />,
           },
+          { id: "assistant", label: "Assistant", content: <AssistantPanel /> },
           { id: "guide", label: "Guide", content: <GuidePanel /> },
+          { id: "settings", label: "Settings", content: <SettingsPanel /> },
         ]
       : [
+          { id: "assistant", label: "Assistant", content: <AssistantPanel /> },
           { id: "guide", label: "Guide", content: <GuidePanel /> },
+          { id: "settings", label: "Settings", content: <SettingsPanel /> },
         ]),
   ];
 
-  return <Tabs tabs={rightTabs} defaultTab="properties" />;
+  return <Tabs tabs={rightTabs} active={rightSidebarTab} onChange={setRightSidebarTab} />;
 }
 
 export function AppShell() {
@@ -293,6 +332,7 @@ export function AppShell() {
   return (
     <div className="flex flex-col w-full h-full bg-surface text-text-primary">
       <RibbonToolbar />
+      <div aria-hidden className="h-px accent-hairline shrink-0" />
 
       <div className="flex-1 min-h-0">
         <PanelGroup orientation="horizontal" className="h-full">

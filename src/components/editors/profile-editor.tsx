@@ -1,10 +1,12 @@
-import { useRef, useEffect, useState } from "react";
+import { useThemeColors } from "@/lib/theme-tokens";
+import { useCanvas2d } from "./use-canvas-2d";
+import { useState } from "react";
 import { useSelectionStore } from "@/stores/selection-store";
 import { useProjectStore } from "@/stores/project-store";
 import type { ProfileObject } from "@/lib/types/civil-objects";
 
 export function ProfileEditor() {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const colors = useThemeColors();
   const selectedIds = useSelectionStore((s) => s.selectedIds);
   const objects = useProjectStore((s) => s.objects);
   const [exaggeration, setExaggeration] = useState(5);
@@ -14,22 +16,14 @@ export function ProfileEditor() {
       ? (objects.get(selectedIds[0]) as ProfileObject | undefined)
       : undefined;
 
-  function draw() {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
-
-    const w = canvas.width;
-    const h = canvas.height;
+  function draw(ctx: CanvasRenderingContext2D, w: number, h: number) {
     const padding = 50;
 
-    ctx.fillStyle = "#0a0a0a";
+    ctx.fillStyle = colors.surface;
     ctx.fillRect(0, 0, w, h);
 
     if (!profile || profile.type !== "profile") {
-      ctx.fillStyle = "#525252";
+      ctx.fillStyle = colors.textMuted;
       ctx.font = "12px Inter, sans-serif";
       ctx.fillText("Select a profile to edit", 20, 30);
       return;
@@ -54,10 +48,10 @@ export function ProfileEditor() {
     const toScreenX = (s: number) => padding + (s - minS) * scaleX;
     const toScreenY = (e: number) => h - padding - (e - minE) * scaleY;
 
-    ctx.strokeStyle = "#1a1a2e";
+    ctx.strokeStyle = colors.border;
     ctx.lineWidth = 0.5;
     ctx.font = "9px monospace";
-    ctx.fillStyle = "#525252";
+    ctx.fillStyle = colors.textMuted;
 
     const stationStep = Math.pow(10, Math.floor(Math.log10(rangeS)));
     for (let s = Math.ceil(minS / stationStep) * stationStep; s <= maxS; s += stationStep) {
@@ -88,7 +82,7 @@ export function ProfileEditor() {
     ctx.lineWidth = 2;
     ctx.stroke();
 
-    ctx.fillStyle = "#a3a3a3";
+    ctx.fillStyle = colors.textSecondary;
     ctx.font = "10px monospace";
     ctx.fillText(`Station`, w / 2 - 20, h - 5);
     ctx.save();
@@ -98,19 +92,7 @@ export function ProfileEditor() {
     ctx.restore();
   }
 
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-
-    const observer = new ResizeObserver(() => {
-      canvas.width = canvas.offsetWidth;
-      canvas.height = canvas.offsetHeight;
-      draw();
-    });
-    observer.observe(canvas);
-    draw();
-    return () => observer.disconnect();
-  });
+  const canvasRef = useCanvas2d(draw);
 
   return (
     <div className="h-full relative">

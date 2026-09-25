@@ -1,13 +1,33 @@
 import { useState } from "react";
-import { validateProject } from "@/lib/tauri-bridge";
+import { explainValidation, validateProject } from "@/lib/tauri-bridge";
 import type { ValidationResult } from "@/lib/types/civil-objects";
+import { useLlmConfig, useLlmSettingsStore } from "@/stores/llm-settings-store";
 
 export function ValidationPanel() {
   const [result, setResult] = useState<ValidationResult | null>(null);
   const [loading, setLoading] = useState(false);
+  const [explanation, setExplanation] = useState<string | null>(null);
+  const [explaining, setExplaining] = useState(false);
+  const llmConfig = useLlmConfig();
+  const aiReady = useLlmSettingsStore((s) => s.hasKey) && !!llmConfig.model;
+
+  const handleExplain = async () => {
+    setExplaining(true);
+    try {
+      const text = await explainValidation(llmConfig);
+      setExplanation(text);
+    } catch (err) {
+      // Tauri commands reject with the Rust Err(String).
+      if (typeof err !== "string") throw err;
+      setExplanation(`Couldn't explain results: ${err}`);
+    } finally {
+      setExplaining(false);
+    }
+  };
 
   const handleValidate = async () => {
     setLoading(true);
+    setExplanation(null);
     try {
       const res = await validateProject();
       setResult(res);
@@ -92,6 +112,23 @@ export function ValidationPanel() {
               </div>
             ))}
           </div>
+
+          {result.issues.length > 0 && (
+            <button
+              className="w-full px-2 py-1 text-xs bg-surface-overlay text-text-secondary rounded hover:bg-surface-overlay/80 disabled:opacity-50"
+              onClick={handleExplain}
+              disabled={explaining || !aiReady}
+              title={aiReady ? undefined : "Set up an AI provider in Settings to use this"}
+            >
+              {explaining ? "Explaining..." : "Explain with AI"}
+            </button>
+          )}
+
+          {explanation && (
+            <p className="p-2 text-xs text-text-muted bg-surface-overlay rounded whitespace-pre-wrap max-h-64 overflow-y-auto">
+              {explanation}
+            </p>
+          )}
         </div>
       )}
     </div>

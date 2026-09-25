@@ -1,3 +1,4 @@
+pub mod ai;
 pub mod alignment;
 pub mod corridor;
 pub mod drainage;

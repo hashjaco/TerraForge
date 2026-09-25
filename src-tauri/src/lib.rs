@@ -6,7 +6,7 @@ pub mod spatial;
 pub mod state;
 
 use commands::{
-    alignment, corridor, drainage, grading, intersection,
+    ai, alignment, corridor, drainage, grading, intersection,
     parcel, pipe_network, pressure_network, profile, surface,
     survey, validation,
 };
@@ -93,6 +93,13 @@ pub fn run() {
             // Validation commands
             validation::validate_project,
             validation::validate_pipe_network,
+            // AI commands
+            ai::explain_validation,
+            ai::set_llm_api_key,
+            ai::clear_llm_api_key,
+            ai::has_llm_api_key,
+            ai::ai_chat,
+            ai::list_llm_models,
         ])
         .run(tauri::generate_context!())
         .expect("error while running TerraForge");

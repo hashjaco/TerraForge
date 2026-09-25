@@ -74,7 +74,7 @@ export function ObjectTree() {
   }
 
   return (
-    <div className="h-full overflow-y-auto p-3">
+    <div className="h-full overflow-y-auto p-3" data-tutorial-id="object-tree">
       <h3 className="text-xs font-semibold text-text-secondary uppercase tracking-wider mb-3">
         Objects
       </h3>

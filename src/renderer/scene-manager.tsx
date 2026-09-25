@@ -1,4 +1,5 @@
-import { useRef } from "react";
+import { Grid } from "@react-three/drei";
+import { useShallow } from "zustand/react/shallow";
 import { TerrainMesh } from "./objects/terrain-mesh";
 import { AlignmentLine } from "./objects/alignment-line";
 import { CorridorMesh } from "./objects/corridor-mesh";
@@ -7,148 +8,80 @@ import { ContourLines } from "./objects/contour-lines";
 import { FeatureLineMesh } from "./objects/feature-line-mesh";
 import { ParcelBoundary } from "./objects/parcel-boundary";
 import { IntersectionMesh } from "./objects/intersection-mesh";
-import { TransformGizmo } from "./interaction/transform-gizmo";
 import { useProjectStore } from "@/stores/project-store";
-import { useSelectionStore } from "@/stores/selection-store";
 import { useViewportStore } from "@/stores/viewport-store";
-import { Grid } from "@react-three/drei";
-import type {
-  SurfaceObject,
-  AlignmentObject,
-  CorridorObject,
-  PipeNetworkObject,
-  FeatureLineObject,
-  ParcelObject,
-  IntersectionObject,
-} from "@/lib/types/civil-objects";
-import type * as THREE from "three";
+import { useThemeColors } from "@/lib/theme-tokens";
 
-interface GroupedObjects {
-  surfaces: SurfaceObject[];
-  alignments: AlignmentObject[];
-  corridors: CorridorObject[];
-  pipeNetworks: PipeNetworkObject[];
-  featureLines: FeatureLineObject[];
-  parcels: ParcelObject[];
-  intersections: IntersectionObject[];
+// Each object subscribes to its own store entry, so editing one object re-renders
+// only that object; the manager itself re-renders only when the visible set changes.
+function SceneObject({ id }: { id: string }) {
+  const obj = useProjectStore((s) => s.objects.get(id));
+  const showContours = useViewportStore((s) => s.showContours);
+  if (!obj) return null;
+
+  switch (obj.type) {
+    case "surface":
+      return (
+        <>
+          <TerrainMesh objectId={id} data={obj.data} />
+          {showContours && <ContourLines objectId={id} data={obj.data} />}
+        </>
+      );
+    case "alignment":
+      return <AlignmentLine objectId={id} data={obj.data} />;
+    case "corridor":
+      return <CorridorMesh objectId={id} data={obj.data} />;
+    case "pipe-network":
+      return <PipeNetworkMesh objectId={id} data={obj.data} />;
+    case "feature-line":
+      return <FeatureLineMesh objectId={id} data={obj.data} />;
+    case "parcel":
+      return <ParcelBoundary objectId={id} data={obj.data} />;
+    case "intersection":
+      return <IntersectionMesh objectId={id} data={obj.data} />;
+    default:
+      return null;
+  }
 }
 
 export function SceneManager() {
-  const objects = useProjectStore((s) => s.objects);
+  const visibleIds = useProjectStore(
+    useShallow((s) => {
+      const ids: string[] = [];
+      for (const obj of s.objects.values()) {
+        if (obj.visible) ids.push(obj.id);
+      }
+      return ids;
+    }),
+  );
   const showGrid = useViewportStore((s) => s.showGrid);
-  const showContours = useViewportStore((s) => s.showContours);
-  const selectedIds = useSelectionStore((s) => s.selectedIds);
-
-  const grouped: GroupedObjects = {
-    surfaces: [],
-    alignments: [],
-    corridors: [],
-    pipeNetworks: [],
-    featureLines: [],
-    parcels: [],
-    intersections: [],
-  };
-
-  for (const obj of objects.values()) {
-    if (!obj.visible) continue;
-    switch (obj.type) {
-      case "surface":
-        grouped.surfaces.push(obj as SurfaceObject);
-        break;
-      case "alignment":
-        grouped.alignments.push(obj as AlignmentObject);
-        break;
-      case "corridor":
-        grouped.corridors.push(obj as CorridorObject);
-        break;
-      case "pipe-network":
-        grouped.pipeNetworks.push(obj as PipeNetworkObject);
-        break;
-      case "feature-line":
-        grouped.featureLines.push(obj as FeatureLineObject);
-        break;
-      case "parcel":
-        grouped.parcels.push(obj as ParcelObject);
-        break;
-      case "intersection":
-        grouped.intersections.push(obj as IntersectionObject);
-        break;
-    }
-  }
-
-  const selectedObj =
-    selectedIds.length === 1 ? objects.get(selectedIds[0]) : undefined;
-  const showGizmo = selectedObj?.visible && selectedObj.type !== "profile";
-
-  const gizmoTargetRef = useRef<THREE.Object3D | null>(null);
-
-  function handleGizmoDragEnd(position: [number, number, number]) {
-    if (!selectedObj) return;
-  }
+  const colors = useThemeColors();
 
   return (
     <>
-      <ambientLight intensity={0.4} />
-      <directionalLight position={[100, 200, 100]} intensity={0.8} />
-      <directionalLight position={[-50, 100, -50]} intensity={0.3} />
+      <hemisphereLight args={["#dbe7ff", "#2a2419", 0.35]} />
+      <directionalLight position={[100, 200, 100]} intensity={1.1} />
+      <directionalLight position={[-50, 100, -50]} intensity={0.25} />
 
       {showGrid && (
         <Grid
           args={[1000, 1000]}
           cellSize={10}
-          cellThickness={0.5}
-          cellColor="#1a1a2e"
+          cellThickness={0.6}
+          cellColor={colors.border}
           sectionSize={50}
-          sectionThickness={1}
-          sectionColor="#2a2a4e"
-          fadeDistance={500}
+          sectionThickness={1.2}
+          sectionColor={colors.accent}
+          fadeDistance={800}
+          fadeStrength={1.5}
+          followCamera
           infiniteGrid
         />
       )}
 
-      {grouped.surfaces.map((obj) => (
-        <TerrainMesh key={obj.id} objectId={obj.id} data={obj.data} />
+      {visibleIds.map((id) => (
+        <SceneObject key={id} id={id} />
       ))}
-
-      {showContours &&
-        grouped.surfaces.map((obj) => (
-          <ContourLines
-            key={`contour-${obj.id}`}
-            objectId={obj.id}
-            data={obj.data}
-          />
-        ))}
-
-      {grouped.alignments.map((obj) => (
-        <AlignmentLine key={obj.id} objectId={obj.id} data={obj.data} />
-      ))}
-
-      {grouped.corridors.map((obj) => (
-        <CorridorMesh key={obj.id} objectId={obj.id} data={obj.data} />
-      ))}
-
-      {grouped.pipeNetworks.map((obj) => (
-        <PipeNetworkMesh key={obj.id} objectId={obj.id} data={obj.data} />
-      ))}
-
-      {grouped.featureLines.map((obj) => (
-        <FeatureLineMesh key={obj.id} objectId={obj.id} data={obj.data} />
-      ))}
-
-      {grouped.parcels.map((obj) => (
-        <ParcelBoundary key={obj.id} objectId={obj.id} data={obj.data} />
-      ))}
-
-      {grouped.intersections.map((obj) => (
-        <IntersectionMesh key={obj.id} objectId={obj.id} data={obj.data} />
-      ))}
-
-      {showGizmo && gizmoTargetRef.current && (
-        <TransformGizmo
-          target={gizmoTargetRef.current}
-          onDragEnd={handleGizmoDragEnd}
-        />
-      )}
     </>
   );
 }

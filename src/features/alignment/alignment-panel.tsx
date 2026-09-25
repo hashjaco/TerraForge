@@ -75,6 +75,7 @@ export function AlignmentPanel() {
         variant="primary"
         size="sm"
         onClick={createDemoAlignment}
+        data-tutorial-id="create-alignment-button"
         className="w-full"
       >
         Create Demo Alignment

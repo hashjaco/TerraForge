@@ -7,6 +7,8 @@ interface TutorialProgress {
   currentStep: number;
   totalSteps: number;
   completed: boolean;
+  // True after stepping Back, so an already-satisfied step doesn't auto-advance again.
+  revisiting: boolean;
 }
 
 interface EducationState {
@@ -21,12 +23,18 @@ interface EducationState {
   setMode: (mode: ExperienceMode) => void;
   startTutorial: (tutorialId: string, totalSteps: number) => void;
   advanceStep: () => void;
+  goBack: () => void;
   completeTutorial: () => void;
   exitTutorial: () => void;
   toggleTooltips: () => void;
   toggleDependencyOverlay: () => void;
   toggleGuidance: () => void;
   dismissTip: (tipId: string) => void;
+}
+
+function withTutorial(completed: string[], id: string): string[] {
+  const next = completed.includes(id) ? completed : [...completed, id];
+  return next;
 }
 
 export const useEducationStore = create<EducationState>((set) => ({
@@ -52,24 +60,35 @@ export const useEducationStore = create<EducationState>((set) => ({
         currentStep: 0,
         totalSteps,
         completed: false,
+        revisiting: false,
       },
     }),
 
   advanceStep: () =>
     set((state) => {
-      if (!state.activeTutorial) return state;
+      if (!state.activeTutorial || state.activeTutorial.completed) return state;
       const next = state.activeTutorial.currentStep + 1;
       if (next >= state.activeTutorial.totalSteps) {
         return {
           activeTutorial: { ...state.activeTutorial, completed: true },
-          completedTutorials: [
-            ...state.completedTutorials,
-            state.activeTutorial.tutorialId,
-          ],
+          completedTutorials: withTutorial(state.completedTutorials, state.activeTutorial.tutorialId),
         };
       }
       return {
-        activeTutorial: { ...state.activeTutorial, currentStep: next },
+        activeTutorial: { ...state.activeTutorial, currentStep: next, revisiting: false },
+      };
+    }),
+
+  goBack: () =>
+    set((state) => {
+      if (!state.activeTutorial || state.activeTutorial.currentStep === 0) return state;
+      return {
+        activeTutorial: {
+          ...state.activeTutorial,
+          currentStep: state.activeTutorial.currentStep - 1,
+          completed: false,
+          revisiting: true,
+        },
       };
     }),
 
@@ -78,10 +97,7 @@ export const useEducationStore = create<EducationState>((set) => ({
       if (!state.activeTutorial) return state;
       return {
         activeTutorial: null,
-        completedTutorials: [
-          ...state.completedTutorials,
-          state.activeTutorial.tutorialId,
-        ],
+        completedTutorials: withTutorial(state.completedTutorials, state.activeTutorial.tutorialId),
       };
     }),
 

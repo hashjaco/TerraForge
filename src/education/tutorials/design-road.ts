@@ -1,4 +1,5 @@
 import type { TutorialDefinition } from "./index";
+import { hasObjectOfType, isPanelOpen, isWorkspace } from "./conditions";
 
 export const designRoadTutorial: TutorialDefinition = {
   id: "design-road",
@@ -19,12 +20,15 @@ export const designRoadTutorial: TutorialDefinition = {
       title: "Create an Alignment",
       description:
         "An alignment defines WHERE the road goes in plan view. It's made of straight lines, circular arcs, and transition spirals. Create a demo alignment to see how these geometric elements connect.",
-      targetElement: "alignment-panel",
+      targetElement: () =>
+        isPanelOpen("alignment") ? "create-alignment-button" : isWorkspace("design") ? "tool-alignment" : "workspace-design",
+      action: "Design tab → Alignment → Create Demo Alignment.",
+      completeWhen: () => hasObjectOfType("alignment"),
     },
     {
       title: "Understand Stationing",
       description:
-        'Notice the alignment has a "length" shown in the properties. Every point along the alignment has a "station" value — its distance from the start. Station 0+00 is the beginning, Station 1+50 means 150 meters from the start.',
+        'Notice the alignment has a "length" shown in the properties, and station labels in the 3D view. Every point along the alignment has a "station" value — its distance from the start. Station 0+00 is the beginning, Station 1+50 means 150 meters from the start.',
       whyItMatters:
         "Stationing is the universal reference system in road design. All other elements (profiles, corridors, utilities) reference stations along the alignment.",
     },
@@ -32,7 +36,9 @@ export const designRoadTutorial: TutorialDefinition = {
       title: "Create a Profile",
       description:
         "Now set the VERTICAL elevation of the road. A profile defines how high or low the road is at each station. Create a demo profile for your alignment.",
-      targetElement: "profile-panel",
+      targetElement: () => (isPanelOpen("profile") ? "profile-form" : "tool-profile"),
+      action: "Click Profile, then Create Demo Profile.",
+      completeWhen: () => hasObjectOfType("profile"),
     },
     {
       title: "Profile Points (PVIs)",
@@ -45,12 +51,15 @@ export const designRoadTutorial: TutorialDefinition = {
       title: "Build a Corridor",
       description:
         "Now combine the alignment + profile + a cross-section template to create a 3D corridor. The template defines the road width, lanes, shoulders, and slopes. Select your alignment and profile, then build.",
-      targetElement: "corridor-panel",
+      targetElement: () => (isPanelOpen("corridor") ? "corridor-form" : "tool-corridor"),
+      action: "Click Corridor, then Build Corridor.",
+      completeWhen: () => hasObjectOfType("corridor"),
     },
     {
       title: "Explore the Corridor",
       description:
-        "Your 3D road model appears in the viewport! The corridor is created by sweeping the cross-section template along the alignment at the profile's elevation. Change the cross-section frequency to see the effect.",
+        "Your 3D road model appears in the viewport. The corridor is created by sweeping the cross-section template along the alignment at the profile's elevation. Double-click it to fly the camera to it.",
+      targetElement: "viewport",
     },
     {
       title: "Road Design Complete",

@@ -24,7 +24,7 @@ export function StatusBar() {
   const toggleProfessionalMode = useUIStore((s) => s.toggleProfessionalMode);
 
   return (
-    <div className="h-7 bg-surface-raised border-t border-border flex items-center px-3 text-[11px] text-text-secondary shrink-0">
+    <div className="h-7 bg-surface-raised border-t border-border flex items-center px-3 text-[11px] text-text-secondary shrink-0 tabular" role="status">
       <div className="flex items-center gap-1.5">
         {isLoading && (
           <div className="w-3 h-3 border-2 border-primary-500 border-t-transparent rounded-full animate-spin" />
@@ -42,7 +42,8 @@ export function StatusBar() {
         <span>Objects: {objects.size}</span>
         <span>View: {viewMode.toUpperCase()}</span>
         <span>
-          Pos: {cameraPosition.map((v) => v.toFixed(0)).join(", ")}
+          <span className="text-text-muted">XYZ </span>
+          <span className="font-mono">{cameraPosition.map((v) => v.toFixed(0)).join(", ")}</span>
         </span>
 
         <span
@@ -51,7 +52,7 @@ export function StatusBar() {
               ? "bg-green-900/50 text-green-400"
               : mode === "guided"
                 ? "bg-blue-900/50 text-blue-400"
-                : "bg-neutral-800 text-neutral-400"
+                : "bg-surface-overlay text-text-secondary"
           }`}
         >
           {mode.charAt(0).toUpperCase() + mode.slice(1)}
@@ -59,10 +60,11 @@ export function StatusBar() {
 
         <button
           onClick={toggleProfessionalMode}
+          data-tutorial-id="mode-toggle"
           className={`px-1.5 py-0.5 rounded text-[10px] transition-colors ${
             professionalMode
               ? "bg-amber-900/50 text-amber-400 hover:bg-amber-900/70"
-              : "bg-neutral-800 text-neutral-400 hover:bg-neutral-700"
+              : "bg-surface-overlay text-text-secondary hover:text-text-primary"
           }`}
           title={
             professionalMode

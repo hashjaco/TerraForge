@@ -1,5 +1,6 @@
 import { Line } from "@react-three/drei";
-import { useSelectionStore } from "@/stores/selection-store";
+import { useIsSelected } from "@/stores/selection-store";
+import { civilToThree } from "@/renderer/lib/geometry";
 import type { AlignmentData } from "@/lib/types/civil-objects";
 
 interface Props {
@@ -7,16 +8,14 @@ interface Props {
   data: AlignmentData;
 }
 
+const ALIGNMENT_DRAPE_HEIGHT = 0.5;
+
 export function AlignmentLine({ objectId, data }: Props) {
-  const selectedIds = useSelectionStore((s) => s.selectedIds);
-  const isSelected = selectedIds.includes(objectId);
+  const isSelected = useIsSelected(objectId);
 
-  if (!data.sampledPoints.length) return null;
-
-  // Swap Y→Z so alignment lies on the XZ ground plane (Y-up in Three.js)
   const points: [number, number, number][] = [];
   for (let i = 0; i < data.sampledPoints.length; i += 2) {
-    points.push([data.sampledPoints[i], 0.5, data.sampledPoints[i + 1]]);
+    points.push(civilToThree(data.sampledPoints[i], data.sampledPoints[i + 1], ALIGNMENT_DRAPE_HEIGHT));
   }
 
   if (points.length < 2) return null;
@@ -26,7 +25,7 @@ export function AlignmentLine({ objectId, data }: Props) {
       <Line
         points={points}
         color={isSelected ? "#60a5fa" : "#f59e0b"}
-        lineWidth={2}
+        lineWidth={isSelected ? 3 : 2}
       />
     </group>
   );

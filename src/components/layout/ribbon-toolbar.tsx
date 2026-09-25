@@ -324,9 +324,11 @@ export function RibbonToolbar() {
             onClick={() => setActiveWorkspace(ws)}
             onDoubleClick={toggleRibbon}
             title={WORKSPACE_META[ws].description}
-            className={`px-3 py-1 text-[11px] font-medium rounded-t transition-colors ${
+            aria-current={activeWorkspace === ws ? "page" : undefined}
+            data-tutorial-id={`workspace-${ws}`}
+            className={`px-3 py-1 text-[11px] font-medium rounded-t transition-colors duration-150 ${
               activeWorkspace === ws
-                ? "bg-surface text-primary-400 border-x border-t border-border -mb-px"
+                ? "bg-surface text-primary-400 border-x border-t border-border -mb-px shadow-[inset_0_2px_0_var(--tf-accent)]"
                 : "text-text-secondary hover:text-text-primary hover:bg-surface-overlay"
             }`}
           >
@@ -359,7 +361,7 @@ export function RibbonToolbar() {
 
       {/* Tool strip */}
       {!ribbonCollapsed && (
-        <div className="flex items-stretch h-11 px-2 gap-0 border-t border-border/50 bg-surface">
+        <div key={activeWorkspace} className="flex items-stretch h-11 px-2 gap-0 border-t border-border/50 bg-surface animate-fade-up">
           {groups.map((group, gi) => (
             <div key={gi} className="flex items-center">
               {gi > 0 && <div className="w-px h-7 bg-border mx-1.5" />}
@@ -371,11 +373,12 @@ export function RibbonToolbar() {
                     disabled={tool.disabled}
                     title={tool.shortcut ? `${tool.label} (${tool.shortcut})` : tool.label}
                     data-tutorial-id={`tool-${tool.id}`}
-                    className={`px-2.5 py-1.5 text-[11px] rounded transition-all ${
+                    aria-pressed={tool.active || undefined}
+                    className={`px-2.5 py-1.5 text-[11px] rounded transition-[color,background-color,box-shadow,transform] duration-150 active:scale-[0.97] ${
                       tool.disabled
                         ? "text-text-muted cursor-not-allowed opacity-40"
                         : tool.active
-                          ? "bg-primary-800/60 text-primary-300 shadow-sm"
+                          ? "bg-primary-500/15 text-primary-300 shadow-[inset_0_0_0_1px_color-mix(in_srgb,var(--tf-accent)_45%,transparent)]"
                           : "text-text-secondary hover:bg-surface-overlay hover:text-text-primary"
                     }`}
                   >

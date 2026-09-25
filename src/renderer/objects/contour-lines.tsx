@@ -2,10 +2,33 @@ import { useEffect, useState } from "react";
 import { Line } from "@react-three/drei";
 import type { SurfaceData } from "@/lib/types/civil-objects";
 import { generateContours, type ContourLineResponse } from "@/lib/tauri-bridge";
+import { civilToThree } from "@/renderer/lib/geometry";
 
 interface Props {
   objectId: string;
   data: SurfaceData;
+}
+
+const MAJOR_CONTOUR_EVERY = 5;
+const MAJOR_COLOR: [number, number, number] = [0.96, 0.62, 0.04];
+const MINOR_COLOR: [number, number, number] = [0.47, 0.44, 0.42];
+const CONTOUR_LIFT = 0.05;
+
+// All contours of a surface go into one LineSegments2 so they cost a single draw call.
+function toSegments(contours: ContourLineResponse[]) {
+  const points: [number, number, number][] = [];
+  const colors: [number, number, number][] = [];
+  for (const contour of contours) {
+    const v = contour.vertices;
+    const isMajor = Math.abs(contour.elevation % MAJOR_CONTOUR_EVERY) < 0.01;
+    const color = isMajor ? MAJOR_COLOR : MINOR_COLOR;
+    for (let j = 0; j + 3 < v.length; j += 2) {
+      points.push(civilToThree(v[j], v[j + 1], contour.elevation + CONTOUR_LIFT));
+      points.push(civilToThree(v[j + 2], v[j + 3], contour.elevation + CONTOUR_LIFT));
+      colors.push(color, color);
+    }
+  }
+  return { points, colors };
 }
 
 export function ContourLines({ objectId, data }: Props) {
@@ -21,7 +44,7 @@ export function ContourLines({ objectId, data }: Props) {
         if (!cancelled) setContours(result);
       })
       .catch(() => {
-        // Tauri may not be available during dev (browser-only mode)
+        // Tauri IPC is unavailable in browser-only dev mode.
       });
 
     return () => {
@@ -29,32 +52,8 @@ export function ContourLines({ objectId, data }: Props) {
     };
   }, [objectId, data.pointCount, data.contourInterval]);
 
-  if (contours.length === 0) return <group />;
+  const { points, colors } = toSegments(contours);
+  if (points.length < 2) return null;
 
-  return (
-    <group>
-      {contours.map((contour, i) => {
-        if (contour.vertices.length < 4) return null;
-
-        // Swap Y and Z: civil (X,Y,Z-up) → Three.js (X,Y-up,Z)
-        const points: [number, number, number][] = [];
-        for (let j = 0; j < contour.vertices.length; j += 2) {
-          points.push([contour.vertices[j], contour.elevation, contour.vertices[j + 1]]);
-        }
-
-        if (points.length < 2) return null;
-
-        const isMajor = Math.abs(contour.elevation % 5) < 0.01;
-
-        return (
-          <Line
-            key={`${objectId}-contour-${i}`}
-            points={points}
-            color={isMajor ? "#f59e0b" : "#78716c"}
-            lineWidth={isMajor ? 1.5 : 0.75}
-          />
-        );
-      })}
-    </group>
-  );
+  return <Line segments points={points} vertexColors={colors} lineWidth={1} transparent opacity={0.9} />;
 }

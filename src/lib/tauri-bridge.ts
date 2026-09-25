@@ -600,6 +600,42 @@ export async function validatePipeNetwork(id: string): Promise<ValidationResult>
   return invoke("validate_pipe_network", { id });
 }
 
+export type LlmProvider = "anthropic" | "openai" | "xai";
+
+export interface LlmConfig {
+  provider: LlmProvider;
+  model: string;
+}
+
+export interface ChatTurn {
+  role: "user" | "assistant";
+  content: string;
+}
+
+export async function explainValidation(config: LlmConfig): Promise<string> {
+  return invoke("explain_validation", { config });
+}
+
+export async function aiChat(config: LlmConfig, messages: ChatTurn[]): Promise<string> {
+  return invoke("ai_chat", { config, messages });
+}
+
+export async function setLlmApiKey(provider: LlmProvider, key: string): Promise<void> {
+  return invoke("set_llm_api_key", { provider, key });
+}
+
+export async function clearLlmApiKey(provider: LlmProvider): Promise<void> {
+  return invoke("clear_llm_api_key", { provider });
+}
+
+export async function hasLlmApiKey(provider: LlmProvider): Promise<boolean> {
+  return invoke("has_llm_api_key", { provider });
+}
+
+export async function listLlmModels(provider: LlmProvider): Promise<string[]> {
+  return invoke("list_llm_models", { provider });
+}
+
 // ---- Import/Export Commands ----
 
 export async function importDxfFile(content: string): Promise<SurfaceResponse> {
